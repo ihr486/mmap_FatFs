@@ -17,8 +17,6 @@ int main(int argc, const char *argv[])
   FIL f;
   UINT bw;
 
-  disk_set_device_path(argv[1]);
-
   f_mount(&ff, "0:", 0);
 
   if (f_open(&f, "newfile.txt", FA_WRITE | FA_CREATE_ALWAYS) == FR_OK) {	/* Create a file */
