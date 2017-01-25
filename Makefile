@@ -2,7 +2,7 @@ CSRCS := $(wildcard *.c)
 COBJS := $(CSRCS:%.c=%.o)
 EXE := fatfs
 CC := gcc
-CFLAGS := -std=c99 -g -Wall -Wextra -Wno-switch
+CFLAGS := -std=c99 -O2 -Wall -Wextra -Wno-switch
 .PHONY: all clean
 all: $(EXE)
 clean:

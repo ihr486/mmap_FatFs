@@ -25,6 +25,9 @@ static struct
 	const char *devpath;
 	void *mapped_block;
 	DWORD si_mapped, sc_mapped;
+
+	DWORD write_count, read_count;
+	DWORD write_sector_count, read_sector_count;
 }
 disk;
 
@@ -47,6 +50,13 @@ void disk_set_device_path(const char *devpath)
 	disk.devpath = devpath;
 }
 
+void disk_finalize(void)
+{
+  //printf("Read count = %lu, Read sector count = %lu\n", disk.read_count, disk.read_sector_count);
+  //printf("Write count = %lu, Write sector count = %lu\n", disk.write_count, disk.write_sector_count);
+  printf("%lu %lu %lu %lu\n", disk.read_count, disk.read_sector_count, disk.write_count, disk.write_sector_count);
+}
+
 /*-----------------------------------------------------------------------*/
 /* Inidialize a Drive                                                    */
 /*-----------------------------------------------------------------------*/
@@ -61,6 +71,11 @@ DSTATUS disk_initialize (
 	disk.mapped_block = NULL;
 	disk.si_mapped = 0;
 	disk.sc_mapped = 0;
+
+	disk.write_count = 0;
+	disk.read_count = 0;
+	disk.write_sector_count = 0;
+	disk.read_sector_count = 0;
 	sc_pagesize = sysconf(_SC_PAGESIZE) / SECTOR_SIZE;
 	return disk.status;
 }
@@ -93,11 +108,14 @@ DRESULT disk_read (
 {
 	DRESULT res;
 	(void)pdrv;
-	printf("READ request @ 0x%08X * %u\n", sector, count);
+	//printf("READ request @ 0x%08X * %u\n", sector, count);
 	if ((res = diskio_remap(sector, count)) == RES_OK)
   {
     void *src = (uint8_t *)disk.mapped_block + SECTOR_SIZE * (sector % sc_pagesize);
     memcpy(buff, src, SECTOR_SIZE * count);
+
+    disk.read_count++;
+    disk.read_sector_count += count;
     return RES_OK;
   }
   else
@@ -121,11 +139,14 @@ DRESULT disk_write (
 {
 	DRESULT res;
 	(void)pdrv;
-	printf("WRITE request @ 0x%08X * %u\n", sector, count);
+	//printf("WRITE request @ 0x%08X * %u\n", sector, count);
 	if ((res = diskio_remap(sector, count)) == RES_OK)
   {
     void *dest = (uint8_t *)disk.mapped_block + SECTOR_SIZE * (sector % sc_pagesize);
     memcpy(dest, buff, SECTOR_SIZE * count);
+
+    disk.write_count++;
+    disk.write_sector_count += count;
     return RES_OK;
   }
   else
