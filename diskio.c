@@ -6,32 +6,22 @@
 /* This is an example of glue functions to attach various exsisting      */
 /* storage control modules to the FatFs module with a defined API.       */
 /*-----------------------------------------------------------------------*/
-#include <sys/mman.h>
-#include <sys/fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
 #include <time.h>
 
+#include <libusb.h>
+
 #include "diskio.h"		/* FatFs lower layer API */
+#include "usb_device.h"
+#include "mass_storage.h"
 
 #define SECTOR_SIZE (512)
 
-static struct
-{
-	DSTATUS status;
-	int fd;
-	const char *devpath;
-	void *mapped_block;
-	DWORD si_mapped, sc_mapped;
-
-	DWORD write_count, read_count;
-	DWORD write_sector_count, read_sector_count;
-}
-disk;
-
-static DWORD sc_pagesize = 1;
+DSTATUS status = STA_NOINIT;
+unsigned long read_count = 0, read_sector_count = 0, write_count = 0, write_sector_count = 0;
 
 /*-----------------------------------------------------------------------*/
 /* Get Drive Status                                                      */
@@ -42,19 +32,14 @@ DSTATUS disk_status (
 )
 {
 	(void)pdrv;
-	return disk.status;
-}
-
-void disk_set_device_path(const char *devpath)
-{
-	disk.devpath = devpath;
+	return status;
 }
 
 void disk_finalize(void)
 {
   //printf("Read count = %lu, Read sector count = %lu\n", disk.read_count, disk.read_sector_count);
   //printf("Write count = %lu, Write sector count = %lu\n", disk.write_count, disk.write_sector_count);
-  printf("%lu %lu %lu %lu\n", disk.read_count, disk.read_sector_count, disk.write_count, disk.write_sector_count);
+  printf("%lu %lu %lu %lu\n", read_count, read_sector_count, write_count, write_sector_count);
 }
 
 /*-----------------------------------------------------------------------*/
@@ -66,33 +51,22 @@ DSTATUS disk_initialize (
 )
 {
 	(void)pdrv;
-	disk.status = 0;
-	disk.fd = open(disk.devpath, O_RDWR);
-	disk.mapped_block = NULL;
-	disk.si_mapped = 0;
-	disk.sc_mapped = 0;
 
-	disk.write_count = 0;
-	disk.read_count = 0;
-	disk.write_sector_count = 0;
-	disk.read_sector_count = 0;
-	sc_pagesize = sysconf(_SC_PAGESIZE) / SECTOR_SIZE;
-	return disk.status;
-}
-
-static DRESULT diskio_remap(DWORD si_req, UINT sc_req)
-{
-  if (disk.mapped_block == NULL || si_req < disk.si_mapped || disk.si_mapped + disk.sc_mapped < si_req + sc_req)
-  {
-    if (disk.mapped_block != NULL)
-      munmap(disk.mapped_block, SECTOR_SIZE * disk.sc_mapped);
-    disk.si_mapped = si_req / sc_pagesize * sc_pagesize;
-		disk.sc_mapped = ((si_req % sc_pagesize) + sc_req + sc_pagesize - 1) / sc_pagesize * sc_pagesize;
-		disk.mapped_block = mmap(NULL, SECTOR_SIZE * disk.sc_mapped, PROT_READ | PROT_WRITE, MAP_SHARED, disk.fd, SECTOR_SIZE * disk.si_mapped);
-    if (disk.mapped_block == (void *)-1)
-      return RES_ERROR;
-  }
-  return RES_OK;
+	if (usb_device_open())
+	{
+	  return status;
+	}
+	if (mass_storage_inquiry())
+	{
+	  return status;
+	}
+	while (1)
+	{
+	  int response = mass_storage_test_unit_ready();
+	  if (response == 0) break;
+	}
+	status &= ~STA_NOINIT;
+	return status;
 }
 
 /*-----------------------------------------------------------------------*/
@@ -106,22 +80,17 @@ DRESULT disk_read (
 	UINT count		/* Number of sectors to read */
 )
 {
-	DRESULT res;
 	(void)pdrv;
-	//printf("READ request @ 0x%08X * %u\n", sector, count);
-	if ((res = diskio_remap(sector, count)) == RES_OK)
-  {
-    void *src = (uint8_t *)disk.mapped_block + SECTOR_SIZE * (sector % sc_pagesize);
-    memcpy(buff, src, SECTOR_SIZE * count);
+	//printf("READ request @ 0x%08lX * %u\n", sector, count);
 
-    disk.read_count++;
-    disk.read_sector_count += count;
-    return RES_OK;
-  }
-  else
-  {
-    return res;
-  }
+	read_count++;
+	read_sector_count += count;
+
+	if (mass_storage_read(buff, sector, count))
+	{
+	  return RES_ERROR;
+	}
+	return RES_OK;
 }
 
 
@@ -137,22 +106,17 @@ DRESULT disk_write (
 	UINT count			/* Number of sectors to write */
 )
 {
-	DRESULT res;
 	(void)pdrv;
-	//printf("WRITE request @ 0x%08X * %u\n", sector, count);
-	if ((res = diskio_remap(sector, count)) == RES_OK)
-  {
-    void *dest = (uint8_t *)disk.mapped_block + SECTOR_SIZE * (sector % sc_pagesize);
-    memcpy(dest, buff, SECTOR_SIZE * count);
+	//printf("WRITE request @ 0x%08lX * %u\n", sector, count);
 
-    disk.write_count++;
-    disk.write_sector_count += count;
-    return RES_OK;
-  }
-  else
-  {
-    return res;
-  }
+	write_count++;
+	write_sector_count += count;
+
+	if (mass_storage_write(buff, sector, count))
+	{
+	  return RES_ERROR;
+	}
+	return RES_OK;
 }
 
 
