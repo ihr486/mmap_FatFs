@@ -3,20 +3,22 @@
 #include <libusb.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "ff.h"
 
 extern void disk_set_device_path(const char *devpath);
 extern void disk_finalize(void);
 
-void run_benchmark(int chunk_size)
+void run_benchmark(int chunk_size, const char *filename)
 {
   FATFS ff;
   FIL f;
 
   f_mount(&ff, "0:", 0);
 
-  if (f_open(&f, "newfile.txt", FA_WRITE | FA_OPEN_ALWAYS) == FR_OK)
+  if (f_open(&f, filename, FA_WRITE | FA_OPEN_ALWAYS) == FR_OK)
   {
     FILE *fp = fopen("big.txt", "rb");
     size_t read;
@@ -113,7 +115,7 @@ void stop_measurement(void)
 
 int main(int argc, const char *argv[])
 {
-  if (argc < 2)
+  if (argc < 3)
   {
     fprintf(stderr, "Usage: fatfs [chunk size]\n");
     return EXIT_FAILURE;
@@ -124,11 +126,17 @@ int main(int argc, const char *argv[])
   if (start_measurement())
     return EXIT_FAILURE;
 
-  run_benchmark(chunk_size);
+  struct timespec start_time, end_time;
+  clock_gettime(CLOCK_MONOTONIC, &start_time);
+
+  run_benchmark(chunk_size, argv[2]);
+
+  clock_gettime(CLOCK_MONOTONIC, &end_time);
 
   stop_measurement();
 
-  printf("Total power = %f[W]\n", total);
+  double elapsed_time = (double)end_time.tv_sec + (double)end_time.tv_nsec * 1E-9 - (double)start_time.tv_sec - (double)start_time.tv_nsec * 1E-9;
+  printf("%f %f\n", elapsed_time, total);
 
   return EXIT_SUCCESS;
 }

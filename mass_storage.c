@@ -93,7 +93,7 @@ int mass_storage_inquiry(void)
     vendor[8] = '\0';
     product[16] = '\0';
     revision[4] = '\0';
-    printf("Vendor = \"%s\", Product = \"%s\", Revision = \"%s\"\n", vendor, product, revision);
+    //printf("Vendor = \"%s\", Product = \"%s\", Revision = \"%s\"\n", vendor, product, revision);
   }
   return mass_storage_receive_status(NULL);
 }
@@ -147,9 +147,9 @@ int mass_storage_test_unit_ready(void)
   int result = mass_storage_send_command(cb, 6, MSC_DIR_D2H, 0);
   if (result < 0) return result;
   result = mass_storage_receive_status(NULL);
-  if (result == 0)
+  /*if (result == 0)
     printf("Device ready\n");
   else
-    printf("Device not ready\n");
+    printf("Device not ready\n");*/
   return result;
 }

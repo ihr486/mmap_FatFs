@@ -35,7 +35,7 @@ int usb_device_open(void)
     struct libusb_device_descriptor desc;
     LIBUSB_CHECK(libusb_get_device_descriptor(device_list[i], &desc));
 
-    printf("%ld: %04X:%04X\n", i + 1, desc.idVendor, desc.idProduct);
+    //printf("%ld: %04X:%04X\n", i + 1, desc.idVendor, desc.idProduct);
 
     struct libusb_config_descriptor *conf_desc;
     LIBUSB_CHECK(libusb_get_active_config_descriptor(device_list[i], &conf_desc));
@@ -49,7 +49,7 @@ int usb_device_open(void)
 
         if (if_desc->bInterfaceClass == LIBUSB_CLASS_MASS_STORAGE && if_desc->bInterfaceSubClass == 0x06 && if_desc->bInterfaceProtocol == 0x50)
         {
-          printf("\tInterface #%d: Mass storage, SCSI transparent command set, Bulk-only transport\n", j);
+          //printf("\tInterface #%d: Mass storage, SCSI transparent command set, Bulk-only transport\n", j);
 
           for (unsigned int k = 0; k < if_desc->bNumEndpoints; k++)
           {
@@ -59,13 +59,13 @@ int usb_device_open(void)
             {
               if (ep_desc->bEndpointAddress & 0x80)
               {
-                printf("\tEndpoint 0x%02X: Bulk D2H (Payload = %u bytes)\n", ep_desc->bEndpointAddress, ep_desc->wMaxPacketSize);
+                //printf("\tEndpoint 0x%02X: Bulk D2H (Payload = %u bytes)\n", ep_desc->bEndpointAddress, ep_desc->wMaxPacketSize);
                 endpoint_d2h = ep_desc->bEndpointAddress;
                 payload_d2h = ep_desc->wMaxPacketSize;
               }
               else
               {
-                printf("\tEndpoint 0x%02X: Bulk H2D (Payload = %u bytes)\n", ep_desc->bEndpointAddress, ep_desc->wMaxPacketSize);
+                //printf("\tEndpoint 0x%02X: Bulk H2D (Payload = %u bytes)\n", ep_desc->bEndpointAddress, ep_desc->wMaxPacketSize);
                 endpoint_h2d = ep_desc->bEndpointAddress;
                 payload_h2d = ep_desc->wMaxPacketSize;
               }
