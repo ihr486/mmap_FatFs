@@ -16,5 +16,6 @@ int mass_storage_read(void *data, uint32_t sector, uint16_t count);
 int mass_storage_write(const void *data, uint32_t sector, uint16_t count);
 int mass_storage_read_capacity(void);
 int mass_storage_test_unit_ready(void);
+int mass_storage_synchronize(void);
 
 #endif

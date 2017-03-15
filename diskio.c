@@ -37,6 +37,7 @@ DSTATUS disk_status (
 
 void disk_finalize(void)
 {
+  mass_storage_synchronize();
   //printf("Read count = %lu, Read sector count = %lu\n", disk.read_count, disk.read_sector_count);
   //printf("Write count = %lu, Write sector count = %lu\n", disk.write_count, disk.write_sector_count);
   printf("%lu %lu %lu %lu ", read_count, read_sector_count, write_count, write_sector_count);

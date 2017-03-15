@@ -153,3 +153,14 @@ int mass_storage_test_unit_ready(void)
     printf("Device not ready\n");*/
   return result;
 }
+
+int mass_storage_synchronize(void)
+{
+  uint8_t cb[10];
+  memset(cb, 0, 10);
+  cb[0] = 0x35;
+  int result = mass_storage_send_command(cb, 10, MSC_DIR_D2H, 0);
+  if (result < 0) return result;
+  return mass_storage_receive_status(NULL);
+}
+
